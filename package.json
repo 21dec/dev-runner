@@ -1,0 +1,15 @@
+{
+  "name": "dev-runner",
+  "version": "0.1.0",
+  "description": "Auto-detect project launcher with dep install and port handling",
+  "bin": {
+    "dev": "./dev.js"
+  },
+  "files": [
+    "dev.js",
+    "install_dev_runner.sh",
+    "README.md"
+  ],
+  "license": "MIT",
+  "private": true
+}
