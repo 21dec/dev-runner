@@ -7,9 +7,11 @@ One command to detect your stack, install deps, pick a free port, and start the 
 # install globally from this repo
 npm install -g .
 
-# run in any project root
-dev          # auto-detect + run
-dev --print  # show what would run (no execution)
+# run in any project root (tmux required)
+dev            # auto-detect + run inside tmux
+dev --print    # show what would run (no execution)
+dev sessions   # list tmux sessions started by dev
+dev kill NAME  # kill a specific dev tmux session
 ```
 `npm`’s global bin folder must be on your `PATH` (often `~/.npm-global/bin` or the nvm-managed path).
 
@@ -23,6 +25,7 @@ dev --print  # show what would run (no execution)
   - Java: Gradle `bootRun`, Maven `spring-boot:run`.
 - Installs deps before launch (best effort): `pnpm|yarn|bun|npm install`, `uv sync`, `go mod download`.
 - Resolves port conflicts: starts from a sensible default (e.g., 3000 for Node, 8000 for Django/FastAPI, 8080 for Go/Java), scans for the first free port, and as a last resort asks the OS for any free port; prints the final `PORT`.
+- Runs inside tmux always; multi-command projects open tiled panes. `dev sessions` lists all `dev-...` tmux sessions; `dev kill <name>` terminates one.
 - Friendly output: step banners for detection → install → launch, with color/emoji.
 
 ## Detection rules (Node)
