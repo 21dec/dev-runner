@@ -49,6 +49,7 @@ const loadJSON = (p) => {
 };
 
 const commandExists = (cmd) => spawnSync(cmd, ["-v"], { stdio: "ignore" }).status === 0;
+const tmuxAvailable = () => commandExists("tmux");
 
 const detectPkgManager = () => {
   if (fs.existsSync(path.join(ROOT, "pnpm-lock.yaml"))) return "pnpm";
@@ -292,8 +293,88 @@ const installDeps = (name, pyMode) => {
 
 const shEsc = (s) => `'${String(s).replace(/'/g, "'\\''")}'`;
 
+const makeSessionName = () => {
+  const slug = path.basename(ROOT).replace(/[^a-zA-Z0-9_-]/g, "-") || "project";
+  return `dev-${slug}-${Date.now().toString(36).slice(-4)}`;
+};
+
+const commandString = (cmd, env) => {
+  const envExpr = Object.entries(env || {})
+    .map(([k, v]) => `${k}=${shEsc(v)}`)
+    .join(" ");
+  const prefix = envExpr ? `env ${envExpr} ` : "";
+  return `cd ${shEsc(ROOT)} && ${prefix}${cmd.map(shEsc).join(" ")}`;
+};
+
+const runWithTmux = (commands, env) => {
+  if (!tmuxAvailable()) {
+    logFail("tmux is required but not found. Please install tmux.");
+    process.exit(1);
+  }
+  const session = makeSessionName();
+  const first = commands[0];
+  let res = spawnSync("tmux", ["new-session", "-d", "-s", session, commandString(first, env)], { stdio: "inherit" });
+  if (res.status !== 0) {
+    logFail("Failed to create tmux session");
+    process.exit(res.status || 1);
+  }
+  for (let i = 1; i < commands.length; i++) {
+    const cmd = commands[i];
+    res = spawnSync("tmux", ["split-window", "-v", "-t", session, commandString(cmd, env)], { stdio: "inherit" });
+    if (res.status !== 0) {
+      logFail("Failed to add pane in tmux");
+      process.exit(res.status || 1);
+    }
+  }
+  spawnSync("tmux", ["select-layout", "-t", session, "tiled"], { stdio: "ignore" });
+  logSuccess(`tmux session ready: ${session}`);
+  logStep(`Attach with: tmux attach -t ${session}`);
+};
+
+const listSessions = () => {
+  if (!tmuxAvailable()) {
+    logFail("tmux is required but not found.");
+    process.exit(1);
+  }
+  const res = spawnSync("tmux", ["list-sessions", "-F", "#{session_name}"], { encoding: "utf8" });
+  if (res.status !== 0) {
+    logFail("Failed to list tmux sessions");
+    process.exit(res.status || 1);
+  }
+  const lines = res.stdout
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .filter((s) => s.startsWith("dev-"));
+  if (!lines.length) {
+    console.log("No dev sessions.");
+    return;
+  }
+  lines.forEach((s) => console.log(s));
+};
+
+const killSession = (name) => {
+  if (!tmuxAvailable()) {
+    logFail("tmux is required but not found.");
+    process.exit(1);
+  }
+  const res = spawnSync("tmux", ["kill-session", "-t", name], { stdio: "inherit" });
+  if (res.status === 0) logSuccess(`Killed session ${name}`);
+  else process.exit(res.status || 1);
+};
+
 const main = async () => {
-  const printOnly = process.argv.includes("--print");
+  const args = process.argv.slice(2);
+  if (args[0] === "sessions") return listSessions();
+  if (args[0] === "kill") {
+    const target = args[1];
+    if (!target) {
+      logFail("Usage: dev kill <session>");
+      process.exit(1);
+    }
+    return killSession(target);
+  }
+
+  const printOnly = args.includes("--print");
   const { name, commands, env: extraEnv, pyMode: detectedPyMode } = detect();
   if (!commands.length) {
     logFail("No framework detected. Please add a rule.");
@@ -349,18 +430,8 @@ const main = async () => {
 
   installDeps(name, pyMode);
 
-  logStep("Launching");
-  if (adjustedCommands.length > 1) {
-    logWarn("Multiple commands detected; tmux removed, running the first command only.");
-  }
-
-  const [cmd] = adjustedCommands;
-  const child = spawn(cmd[0], cmd.slice(1), { cwd: ROOT, env, stdio: "inherit" });
-  child.on("exit", (code) => {
-    if (code === 0) logSuccess("Process exited cleanly");
-    else logFail(`Process exited with ${code}`);
-    process.exit(code ?? 0);
-  });
+  logStep("Launching in tmux");
+  runWithTmux(adjustedCommands, env);
 };
 
 main().catch((err) => {
