@@ -16,7 +16,9 @@ dev --print  # show what would run (no execution)
 ## What it does
 - Detects frameworks & runtimes from project files:
   - Node: Next.js, Vite, Nuxt, SvelteKit, Remix, Expo, generic scripts, TypeScript server fallback (`src/index.ts` via ts-node), built `dist/index.js`, or `index.js/server.js`.
-  - Python: Django, FastAPI (uvicorn), Flask, generic `app.py/main.py` (all via `uv run`).
+- Python: Django, FastAPI (uvicorn), Flask, generic `app.py/main.py`.
+  - If `.venv/bin/python` exists, commands run with that interpreter (no uv).
+  - Otherwise uses `uv run`. If neither `.venv` nor `uv` is available, the launcher stops with a warning.
   - Go: `go run` (main.go / cmd/server/main.go / .).
   - Java: Gradle `bootRun`, Maven `spring-boot:run`.
 - Installs deps before launch (best effort): `pnpm|yarn|bun|npm install`, `uv sync`, `go mod download`.
