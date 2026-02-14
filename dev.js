@@ -48,6 +48,8 @@ const loadJSON = (p) => {
   }
 };
 
+const commandExists = (cmd) => spawnSync(cmd, ["-v"], { stdio: "ignore" }).status === 0;
+
 const detectPkgManager = () => {
   if (fs.existsSync(path.join(ROOT, "pnpm-lock.yaml"))) return "pnpm";
   if (fs.existsSync(path.join(ROOT, "yarn.lock"))) return "yarn";
@@ -55,6 +57,24 @@ const detectPkgManager = () => {
   if (fs.existsSync(path.join(ROOT, "package-lock.json")) || fs.existsSync(path.join(ROOT, "npm-shrinkwrap.json"))) return "npm";
   if (fs.existsSync(path.join(ROOT, "package.json"))) return "npm"; // default for Node without lockfile
   return "npm";
+};
+
+const pythonInterpreter = () => {
+  const venv = path.join(ROOT, ".venv", "bin", "python");
+  if (fs.existsSync(venv)) return venv;
+  return "python";
+};
+
+const pythonMode = () => {
+  const venvPy = path.join(ROOT, ".venv", "bin", "python");
+  if (fs.existsSync(venvPy)) return { mode: "venv", python: venvPy };
+  if (commandExists("uv")) return { mode: "uv", python: "python" };
+  return { mode: "none", python: "python" };
+};
+
+const wrapPythonCmd = (cmdParts, mode) => {
+  if (mode === "uv") return ["uv", "run", ...cmdParts];
+  return cmdParts;
 };
 
 const pmScript = (sub) => {
@@ -117,9 +137,10 @@ const wrapUv = (cmd) => (cmd[0] === "uv" ? cmd : ["uv", "run", ...cmd]);
 
 const detectPythonCommand = () => {
   const env = {};
+  const { mode, python } = pythonMode();
   if (fs.existsSync(path.join(ROOT, "manage.py"))) {
     const port = process.env.PORT || "8000";
-    return { name: "Django", commands: [wrapUv(["python", "manage.py", "runserver", port])], env };
+    return { name: "Django", commands: [wrapPythonCmd([python, "manage.py", "runserver", port], mode)], env, pyMode: mode };
   }
   if (requirementContains("fastapi")) {
     let appPath = "main:app";
@@ -130,7 +151,7 @@ const detectPythonCommand = () => {
       }
     }
     const port = process.env.PORT || "8000";
-    return { name: "FastAPI", commands: [wrapUv(["uvicorn", appPath, "--reload", "--port", port])], env };
+    return { name: "FastAPI", commands: [wrapPythonCmd(["uvicorn", appPath, "--reload", "--port", port], mode)], env, pyMode: mode };
   }
   if (requirementContains("flask")) {
     if (!process.env.FLASK_APP) {
@@ -141,10 +162,10 @@ const detectPythonCommand = () => {
         }
       }
     }
-    return { name: "Flask", commands: [wrapUv(["flask", "run"])], env };
+    return { name: "Flask", commands: [wrapPythonCmd([python, "-m", "flask", "run"], mode)], env, pyMode: mode };
   }
   for (const c of ["app.py", "main.py"]) {
-    if (fs.existsSync(path.join(ROOT, c))) return { name: "Python", commands: [wrapUv(["python", c])], env };
+    if (fs.existsSync(path.join(ROOT, c))) return { name: "Python", commands: [wrapPythonCmd([python, c], mode)], env, pyMode: mode };
   }
   return null;
 };
@@ -226,7 +247,7 @@ const ensureFlaskPort = (name, commands, env) => {
   });
 };
 
-const installDeps = (name) => {
+const installDeps = (name, pyMode) => {
   logStep("Installing dependencies");
   if (["Next.js", "Vite", "Nuxt", "SvelteKit", "Remix", "Expo", "Node"].includes(name) && fs.existsSync(path.join(ROOT, "package.json"))) {
     const pm = detectPkgManager();
@@ -244,6 +265,14 @@ const installDeps = (name) => {
     return;
   }
   if (["Django", "FastAPI", "Flask", "Python"].includes(name)) {
+    if (pyMode === "venv") {
+      logWarn("Using existing .venv; skipping auto-install (run pip/uv inside venv if needed).");
+      return;
+    }
+    if (pyMode === "none") {
+      logFail("No .venv and uv not found. Please create a venv or install uv.");
+      process.exit(1);
+    }
     const manifests = ["pyproject.toml", "uv.lock", "requirements.txt", "requirements-dev.txt", "Pipfile", "poetry.lock"];
     if (manifests.some((f) => fs.existsSync(path.join(ROOT, f)))) {
       const result = spawnSync("uv", ["sync"], { cwd: ROOT, stdio: "inherit" });
@@ -265,9 +294,16 @@ const shEsc = (s) => `'${String(s).replace(/'/g, "'\\''")}'`;
 
 const main = async () => {
   const printOnly = process.argv.includes("--print");
-  const { name, commands, env: extraEnv } = detect();
+  const { name, commands, env: extraEnv, pyMode: detectedPyMode } = detect();
   if (!commands.length) {
     logFail("No framework detected. Please add a rule.");
+    process.exit(1);
+  }
+
+  const pyNames = new Set(["Django", "FastAPI", "Flask", "Python"]);
+  const pyMode = detectedPyMode || (pyNames.has(name) ? pythonMode().mode : undefined);
+  if (pyNames.has(name) && pyMode === "none") {
+    logFail("Python project detected but no .venv and no uv in PATH. Please create .venv or install uv.");
     process.exit(1);
   }
 
@@ -311,7 +347,7 @@ const main = async () => {
 
   if (printOnly) return;
 
-  installDeps(name);
+  installDeps(name, pyMode);
 
   logStep("Launching");
   if (adjustedCommands.length > 1) {
