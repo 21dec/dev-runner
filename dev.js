@@ -395,6 +395,53 @@ const main = async () => {
     }
     return killSession(target);
   }
+  if (args[0] === "completion") {
+    console.log(`#compdef dev
+
+local curcontext="$curcontext" state line
+typeset -A opt_args
+
+_arguments -C \\
+    '--print[Show detected commands and port only]' \\
+    '--no-tmux[Force running without tmux]' \\
+    '1: :->cmds' \\
+    '*:: :->args'
+
+case $state in
+    cmds)
+        # If the first argument is already a flag, we typically don't offer subcommands
+        if [[ $line[1] == --* ]]; then
+            return 0
+        fi
+
+        local -a commands
+        commands=(
+            'sessions:List tmux sessions started by dev'
+            'kill:Kill a specific dev tmux session'
+            'completion:Generate zsh completion script'
+            'help:Show help message'
+        )
+        _describe -t commands 'dev command' commands
+        ;;
+    args)
+        case $line[1] in
+            kill)
+                local -a sessions
+                # List tmux sessions starting with 'dev-'
+                if command -v tmux >/dev/null; then
+                    sessions=($(tmux list-sessions -F "#{session_name}" 2>/dev/null | grep "^dev-"))
+                fi
+                if (( \${#sessions} )); then
+                    _describe -t sessions 'session' sessions
+                else
+                    _message 'no dev sessions found'
+                fi
+                ;;
+        esac
+        ;;
+esac`);
+    return;
+  }
   if (args[0] === "help") {
     console.log(`
 dev - project auto launcher (tmux required)
@@ -405,6 +452,8 @@ Usage:
   dev --no-tmux     # force no tmux (run first command only)
   dev sessions      # list tmux sessions started by dev
   dev kill <name>   # kill a specific dev tmux session
+  dev completion    # generate zsh completion script
+  dev help          # usage
 
 Behavior:
   - Detects stack (Node/Python/Go/Java) and picks commands.
