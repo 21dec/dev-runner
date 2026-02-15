@@ -5,6 +5,9 @@
   "bin": {
     "dev": "./dev.js"
   },
+  "scripts": {
+    "build": "chmod +x dev.js"
+  },
   "files": [
     "dev.js",
     "install_dev_runner.sh",
