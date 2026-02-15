@@ -348,18 +348,12 @@ const listSessions = () => {
     process.exit(1);
   }
   const res = spawnSync("tmux", ["list-sessions", "-F", "#{session_name}\t#{session_created}\t#{@dev_root}\t#{session_path}"], { encoding: "utf8" });
-  if (res.status !== 0) {
-    logFail("Failed to list tmux sessions");
-    process.exit(res.status || 1);
-  }
+  if (res.status !== 0) return;
   const lines = res.stdout
     .split(/\r?\n/)
     .filter(Boolean)
     .filter((s) => s.startsWith("dev-"));
-  if (!lines.length) {
-    console.log("No dev sessions.");
-    return;
-  }
+  if (!lines.length) return;
   const parsed = lines.map((line) => {
     const [name, created, root, sessionPath] = line.split("\t");
     const ts = Number(created) * 1000;
