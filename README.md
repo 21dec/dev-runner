@@ -55,14 +55,20 @@ or `chmod +x dev.js && ./dev.js`.
 
 ## Zsh Completion
 
-To enable zsh autocompletion for `dev` commands:
+Add the completion script to your `fpath` or source it in your `.zshrc`.
 
-1. Add the completion script path to your `fpath` in `~/.zshrc`:
-   ```zsh
-   fpath=(/path/to/dev-runner/completions $fpath)
-   autoload -Uz compinit
-   compinit
-   ```
-   (Replace `/path/to/dev-runner` with the actual path to this repository)
+Method 1 (Recommended): Add to `fpath`
+```zsh
+# Create a directory for completions if it doesn't exist
+mkdir -p ~/.zsh/completions
 
-2. Restart your shell.
+# Add it to your fpath in .zshrc
+echo 'fpath=(~/.zsh/completions $fpath)' >> ~/.zshrc
+echo 'autoload -Uz compinit && compinit' >> ~/.zshrc
+
+# Generate the completion script
+dev completion > ~/.zsh/completions/_dev
+
+# Reload shell
+exec zsh
+```
