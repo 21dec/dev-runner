@@ -48,8 +48,8 @@ const loadJSON = (p) => {
   }
 };
 
-const commandExists = (cmd) => spawnSync(cmd, ["-v"], { stdio: "ignore" }).status === 0;
-const tmuxAvailable = () => commandExists("tmux");
+const commandExists = (cmd, args = ["-V"]) => spawnSync(cmd, args, { stdio: "ignore" }).status === 0;
+const tmuxAvailable = () => commandExists("tmux", ["-V"]);
 
 const detectPkgManager = () => {
   if (fs.existsSync(path.join(ROOT, "pnpm-lock.yaml"))) return "pnpm";
@@ -298,6 +298,7 @@ const makeSessionName = () => {
   return `dev-${slug}-${Date.now().toString(36).slice(-4)}`;
 };
 
+
 const commandString = (cmd, env) => {
   const envExpr = Object.entries(env || {})
     .map(([k, v]) => `${k}=${shEsc(v)}`)
@@ -307,10 +308,6 @@ const commandString = (cmd, env) => {
 };
 
 const runWithTmux = (commands, env) => {
-  if (!tmuxAvailable()) {
-    logFail("tmux is required but not found. Please install tmux.");
-    process.exit(1);
-  }
   const session = makeSessionName();
   const first = commands[0];
   let res = spawnSync("tmux", ["new-session", "-d", "-s", session, commandString(first, env)], { stdio: "inherit" });
@@ -318,6 +315,7 @@ const runWithTmux = (commands, env) => {
     logFail("Failed to create tmux session");
     process.exit(res.status || 1);
   }
+  spawnSync("tmux", ["set-session", "-t", session, "@dev_root", ROOT], { stdio: "ignore" });
   for (let i = 1; i < commands.length; i++) {
     const cmd = commands[i];
     res = spawnSync("tmux", ["split-window", "-v", "-t", session, commandString(cmd, env)], { stdio: "inherit" });
@@ -331,12 +329,25 @@ const runWithTmux = (commands, env) => {
   logStep(`Attach with: tmux attach -t ${session}`);
 };
 
+const runSequential = (commands, env) => {
+  if (commands.length > 1) {
+    logWarn("Multiple commands detected; tmux disabled, running the first command only.");
+  }
+  const [cmd] = commands;
+  const child = spawn(cmd[0], cmd.slice(1), { cwd: ROOT, env, stdio: "inherit" });
+  child.on("exit", (code) => {
+    if (code === 0) logSuccess("Process exited cleanly");
+    else logFail(`Process exited with ${code}`);
+    process.exit(code ?? 0);
+  });
+};
+
 const listSessions = () => {
   if (!tmuxAvailable()) {
     logFail("tmux is required but not found.");
     process.exit(1);
   }
-  const res = spawnSync("tmux", ["list-sessions", "-F", "#{session_name}"], { encoding: "utf8" });
+  const res = spawnSync("tmux", ["list-sessions", "-F", "#{session_name}\t#{session_created}\t#{@dev_root}\t#{session_path}"], { encoding: "utf8" });
   if (res.status !== 0) {
     logFail("Failed to list tmux sessions");
     process.exit(res.status || 1);
@@ -349,7 +360,24 @@ const listSessions = () => {
     console.log("No dev sessions.");
     return;
   }
-  lines.forEach((s) => console.log(s));
+  const parsed = lines.map((line) => {
+    const [name, created, root, sessionPath] = line.split("\t");
+    const ts = Number(created) * 1000;
+    const when = Number.isFinite(ts) ? new Date(ts).toLocaleString() : "unknown";
+    const sourcePath = (root && root.trim()) ? root : (sessionPath || "");
+    const tail = sourcePath.slice(-30);
+    const pathTail = tail ? (sourcePath.length > 30 ? `..${tail}` : tail) : "unknown";
+    return { name, when, pathTail };
+  });
+  const maxName = Math.max(...parsed.map((p) => p.name.length));
+  const maxPath = Math.max(...parsed.map((p) => p.pathTail.length));
+  const gap = 4;
+  parsed.forEach(({ name, when, pathTail }) => {
+    const padded = name.padEnd(maxName + gap, " ");
+    const pathPadded = pathTail.padEnd(maxPath + gap, " ");
+    const time = paint(when, "yellow");
+    console.log(`${padded}${pathPadded}${time}`);
+  });
 };
 
 const killSession = (name) => {
@@ -373,8 +401,29 @@ const main = async () => {
     }
     return killSession(target);
   }
+  if (args[0] === "help") {
+    console.log(`
+dev - project auto launcher (tmux required)
+
+Usage:
+  dev               # detect + install deps + run (tmux if available)
+  dev --print       # show detected commands/PORT only
+  dev --no-tmux     # force no tmux (run first command only)
+  dev sessions      # list tmux sessions started by dev
+  dev kill <name>   # kill a specific dev tmux session
+
+Behavior:
+  - Detects stack (Node/Python/Go/Java) and picks commands.
+  - Installs deps (pnpm/yarn/bun/npm, uv sync, go mod download).
+  - Chooses a free port near the default; falls back to OS-assigned.
+  - Launches inside tmux when available; otherwise runs the first command sequentially.
+  - Python: prefers .venv/bin/python; else uv run; if neither, exits.
+`);
+    return;
+  }
 
   const printOnly = args.includes("--print");
+  const forceNoTmux = args.includes("--no-tmux");
   const { name, commands, env: extraEnv, pyMode: detectedPyMode } = detect();
   if (!commands.length) {
     logFail("No framework detected. Please add a rule.");
@@ -430,8 +479,19 @@ const main = async () => {
 
   installDeps(name, pyMode);
 
-  logStep("Launching in tmux");
-  runWithTmux(adjustedCommands, env);
+  const wantTmux = !forceNoTmux && tmuxAvailable();
+  if (wantTmux) {
+    logStep("Launching in tmux");
+    runWithTmux(adjustedCommands, env);
+    return;
+  }
+
+  if (!forceNoTmux) {
+    logWarn("tmux not found; running without tmux.");
+  } else {
+    logStep("Launching without tmux (flag)");
+  }
+  runSequential(adjustedCommands, env);
 };
 
 main().catch((err) => {

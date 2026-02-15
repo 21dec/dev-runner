@@ -1,54 +1,54 @@
 # dev (project auto launcher)
 
-One command to detect your stack, install deps, pick a free port, and start the right dev process.
+One command to detect your stack, install deps, pick a free port, and start the right dev process. Uses tmux when available; otherwise runs the first command sequentially.
 
 ## Quick start
 ```bash
-# install globally from this repo
 npm install -g .
 
-# run in any project root (tmux required)
-dev            # auto-detect + run inside tmux
-dev --print    # show what would run (no execution)
-dev sessions   # list tmux sessions started by dev
-dev kill NAME  # kill a specific dev tmux session
+# run in any project root
+dev             # auto-detect + run (tmux if available)
+dev --print     # show what would run (no execution)
+dev --no-tmux   # force run without tmux (first command only)
+dev sessions    # list tmux sessions started by dev
+dev kill NAME   # kill a specific dev tmux session
+dev help        # usage
 ```
-`npm`’s global bin folder must be on your `PATH` (often `~/.npm-global/bin` or the nvm-managed path).
+Ensure your npm global bin directory is on `PATH` (`npm bin -g`).
 
 ## What it does
-- Detects frameworks & runtimes from project files:
-  - Node: Next.js, Vite, Nuxt, SvelteKit, Remix, Expo, generic scripts, TypeScript server fallback (`src/index.ts` via ts-node), built `dist/index.js`, or `index.js/server.js`.
-- Python: Django, FastAPI (uvicorn), Flask, generic `app.py/main.py`.
-  - If `.venv/bin/python` exists, commands run with that interpreter (no uv).
-  - Otherwise uses `uv run`. If neither `.venv` nor `uv` is available, the launcher stops with a warning.
+- Detects frameworks/runtimes:
+  - Node: Next.js, Vite, Nuxt, SvelteKit, Remix, Expo, generic scripts, TypeScript server fallback (`src/index.ts` via ts-node), `dist/index.js`, or `index.js/server.js`.
+  - Python: Django, FastAPI (uvicorn), Flask, generic `app.py/main.py`.
+    - If `.venv/bin/python` exists, runs with that interpreter (no uv).
+    - Else uses `uv run`. If neither `.venv` nor `uv` is available, exits with a warning.
   - Go: `go run` (main.go / cmd/server/main.go / .).
   - Java: Gradle `bootRun`, Maven `spring-boot:run`.
-- Installs deps before launch (best effort): `pnpm|yarn|bun|npm install`, `uv sync`, `go mod download`.
-- Resolves port conflicts: starts from a sensible default (e.g., 3000 for Node, 8000 for Django/FastAPI, 8080 for Go/Java), scans for the first free port, and as a last resort asks the OS for any free port; prints the final `PORT`.
-- Runs inside tmux always; multi-command projects open tiled panes. `dev sessions` lists all `dev-...` tmux sessions; `dev kill <name>` terminates one.
-- Friendly output: step banners for detection → install → launch, with color/emoji.
-
-## Detection rules (Node)
-- Lockfiles decide the package manager (pnpm > yarn > bun > npm). If only `package.json` exists, default is npm.
-- Prefers framework-specific configs; otherwise uses scripts `dev|start|serve`.
-- If both `dev:server` and `dev:client` scripts exist, they are listed, but only the first runs (tmux support was removed).
-- TypeScript server fallback: `tsconfig.json` + `src/index.ts` → `pnpm exec ts-node src/index.ts`.
-- Build fallback: `dist/index.js` → `node dist/index.js`.
-
-## Print-only mode
-`dev --print` shows detected framework, command(s), and chosen `PORT` without running anything. Useful in CI or to confirm detection.
+- Package manager: chooses pnpm > yarn > bun > npm based on lockfiles; defaults to npm when only package.json is present.
+- Installs deps (best effort): `pnpm|yarn|bun|npm install`, `uv sync`, `go mod download`.
+- Port handling: starts from a sensible default (e.g., 3000 for Node, 8000 for Django/FastAPI, 8080 for Go/Java), scans for a free port, falls back to an OS-assigned port; prints the final `PORT`.
+- Output: colorized step banners (Detection → Installing deps → Launching).
+- tmux behavior: when available, opens a new session and tiles panes for multiple commands. `dev sessions` lists `dev-...` sessions; `dev kill <name>` terminates one. Without tmux (or with `--no-tmux`), only the first command runs.
 
 ## Requirements
-- Node.js + npm (or your chosen manager). For a fresh setup you can also run: `./install_node_npm.sh` (nvm + latest LTS).
-- Optional: `uv` if you run Python projects; `go` for Go projects; Java toolchain for Gradle/Maven projects.
+- Node.js + npm (or your package manager)
+- tmux (recommended for multi-command tiling; otherwise single command runs)
+- Optional: `uv` for Python, `go` for Go, Java toolchain for Gradle/Maven
+
+## Handy tmux commands
+- Attach: `tmux attach -t <name>`
+- List: `tmux ls`
+- Kill: `tmux kill-session -t <name>`
+- Move pane: `Ctrl-b` then arrow
+- Split: `Ctrl-b %` (vertical), `Ctrl-b "` (horizontal)
 
 ## Local (non-global) use
 ```bash
 node dev.js         # run
 node dev.js --print # dry run
 ```
-or make it executable: `chmod +x dev.js && ./dev.js`.
+or `chmod +x dev.js && ./dev.js`.
 
 ## Notes
-- Dependency install failures are warnings; the launcher still attempts to run.
-- If you need custom rules, add more heuristics in `dev.js` and reinstall globally (`npm install -g .`).
+- Dependency install failures emit warnings; the launcher still attempts to run.
+- To add custom detection rules, edit `dev.js` and reinstall globally (`npm install -g .`).
