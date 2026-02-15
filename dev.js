@@ -256,10 +256,10 @@ const installDeps = (name, pyMode) => {
       pm === "yarn"
         ? ["yarn", "install"]
         : pm === "bun"
-        ? ["bun", "install"]
-        : pm === "pnpm"
-        ? ["pnpm", "install"]
-        : ["npm", "install"];
+          ? ["bun", "install"]
+          : pm === "pnpm"
+            ? ["pnpm", "install"]
+            : ["npm", "install"];
     const result = spawnSync(installCmd[0], installCmd.slice(1), { cwd: ROOT, stdio: "inherit" });
     if (result.status === 0) logSuccess(`${pm} install complete`);
     else logWarn(`${pm} install exited with ${result.status} (continuing)`);
