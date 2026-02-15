@@ -52,3 +52,17 @@ or `chmod +x dev.js && ./dev.js`.
 ## Notes
 - Dependency install failures emit warnings; the launcher still attempts to run.
 - To add custom detection rules, edit `dev.js` and reinstall globally (`npm install -g .`).
+
+## Zsh Completion
+
+To enable zsh autocompletion for `dev` commands:
+
+1. Add the completion script path to your `fpath` in `~/.zshrc`:
+   ```zsh
+   fpath=(/path/to/dev-runner/completions $fpath)
+   autoload -Uz compinit
+   compinit
+   ```
+   (Replace `/path/to/dev-runner` with the actual path to this repository)
+
+2. Restart your shell.
