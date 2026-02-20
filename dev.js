@@ -530,6 +530,7 @@ _arguments -C \\
     '--print[Show detected commands and port only]' \\
     '--tmux[Launch inside tmux session]' \\
     '--port[Specify port number]:port number:' \\
+    '*--env[Set environment variable]:env var (KEY=VALUE):' \\
     '1: :->cmds' \\
     '*:: :->args'
 
@@ -576,6 +577,7 @@ Usage:
   dev                    # detect + install deps + run (sequential, foreground)
   dev --print            # show detected commands/PORT only
   dev --port <number>    # use a specific port
+  dev --env KEY=VALUE    # set env var (repeatable, e.g. --env VITE_API_PORT=4000)
   dev --tmux             # launch inside a tmux session
   dev sessions           # list tmux sessions started by dev
   dev kill <name>        # kill a specific dev tmux session
@@ -606,6 +608,21 @@ Behavior:
     process.exit(1);
   }
 
+  // Parse --env KEY=VALUE flags (repeatable)
+  const userEnvOverrides = {};
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--env" && args[i + 1]) {
+      const pair = args[i + 1];
+      const eqIdx = pair.indexOf("=");
+      if (eqIdx <= 0) {
+        logFail(`--env requires KEY=VALUE format (got: ${pair})`);
+        process.exit(1);
+      }
+      userEnvOverrides[pair.slice(0, eqIdx)] = pair.slice(eqIdx + 1);
+      i++; // skip value
+    }
+  }
+
   const { name, commands, env: extraEnv, pyMode: detectedPyMode } = detect();
   if (!commands.length) {
     logFail("No framework detected. Please add a rule.");
@@ -619,7 +636,7 @@ Behavior:
     process.exit(1);
   }
 
-  const env = { ...process.env, ...extraEnv };
+  const env = { ...process.env, ...extraEnv, ...userEnvOverrides };
 
   if (portFlag) {
     // --port takes highest priority; skip free-port scan
