@@ -140,8 +140,8 @@ const detectPythonCommand = (root = ROOT) => {
   const env = {};
   const { mode, python } = pythonMode(root);
   if (fs.existsSync(path.join(root, "manage.py"))) {
-    const port = process.env.PORT || "8000";
-    return { name: "Django", commands: [wrapPythonCmd([python, "manage.py", "runserver", port], mode)], env, pyMode: mode };
+    // Port is injected later by applyPort(); use placeholder for now
+    return { name: "Django", commands: [wrapPythonCmd([python, "manage.py", "runserver", "PORT_PLACEHOLDER"], mode)], env, pyMode: mode };
   }
   if (requirementContains(root, "fastapi")) {
     let appPath = "main:app";
@@ -151,8 +151,8 @@ const detectPythonCommand = (root = ROOT) => {
         break;
       }
     }
-    const port = process.env.PORT || "8000";
-    return { name: "FastAPI", commands: [wrapPythonCmd(["uvicorn", appPath, "--reload", "--port", port], mode)], env, pyMode: mode };
+    // Port is injected later by applyPort(); use placeholder for now
+    return { name: "FastAPI", commands: [wrapPythonCmd(["uvicorn", appPath, "--reload", "--port", "PORT_PLACEHOLDER"], mode)], env, pyMode: mode };
   }
   if (requirementContains(root, "flask")) {
     if (!process.env.FLASK_APP) {
@@ -238,14 +238,50 @@ const pickFreePort = (start, attempts = 200) =>
     tryPort(start, attempts);
   });
 
-const ensureFlaskPort = (name, commands, env) => {
-  if (name !== "Flask") return commands;
+/**
+ * Apply the resolved port to commands/env in a framework-aware way:
+ *  - Django  : replace PORT_PLACEHOLDER arg
+ *  - FastAPI : replace --port PORT_PLACEHOLDER arg
+ *  - Flask   : add --port arg + set FLASK_RUN_PORT
+ *  - Spring  : set SERVER_PORT env var
+ *  - Others  : PORT env var is already set; nothing extra needed
+ */
+const applyPort = (name, commands, env) => {
   if (!env.PORT) return commands;
-  env.FLASK_RUN_PORT = env.PORT;
-  return commands.map((cmd) => {
-    if (cmd.includes("--port")) return cmd;
-    return [...cmd, "--port", env.PORT];
-  });
+  const port = env.PORT;
+
+  if (name === "Django") {
+    return commands.map((cmd) =>
+      cmd.map((arg) => (arg === "PORT_PLACEHOLDER" ? port : arg))
+    );
+  }
+
+  if (name === "FastAPI") {
+    return commands.map((cmd) => {
+      const idx = cmd.indexOf("PORT_PLACEHOLDER");
+      if (idx !== -1) {
+        const next = [...cmd];
+        next[idx] = port;
+        return next;
+      }
+      return cmd;
+    });
+  }
+
+  if (name === "Flask") {
+    env.FLASK_RUN_PORT = port;
+    return commands.map((cmd) => {
+      if (cmd.includes("--port")) return cmd;
+      return [...cmd, "--port", port];
+    });
+  }
+
+  if (name === "Gradle" || name === "Maven") {
+    env.SERVER_PORT = port; // Spring Boot reads SERVER_PORT
+    return commands;
+  }
+
+  return commands; // Node/Go/etc: PORT env var is sufficient
 };
 
 const installDeps = (name, pyMode) => {
@@ -589,7 +625,7 @@ Behavior:
       env.PORT = String(free);
     }
   }
-  const adjustedCommands = ensureFlaskPort(name, commands, env);
+  const adjustedCommands = applyPort(name, commands, env);
 
   logStep("Detection");
   console.log(`  Framework : ${name}`);
