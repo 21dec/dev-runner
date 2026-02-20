@@ -272,6 +272,14 @@ const applyPort = (name, commands, env) => {
     });
   }
 
+  if (name === "Vite" || name === "SvelteKit") {
+    return commands.map((cmd) => {
+      if (cmd.includes("--port")) return cmd;
+      // Pass --port through npm/pnpm/yarn script via `--`
+      return [...cmd, "--", "--port", port];
+    });
+  }
+
   if (name === "Gradle" || name === "Maven") {
     env.SERVER_PORT = port; // Spring Boot reads SERVER_PORT
     return commands;
