@@ -60,11 +60,7 @@ const detectPkgManager = (root = ROOT) => {
   return "npm";
 };
 
-const pythonInterpreter = (root = ROOT) => {
-  const venv = path.join(root, ".venv", "bin", "python");
-  if (fs.existsSync(venv)) return venv;
-  return "python";
-};
+
 
 const pythonMode = (root = ROOT) => {
   const venvPy = path.join(root, ".venv", "bin", "python");
@@ -134,7 +130,7 @@ const detectNodeCommand = (root = ROOT) => {
   return null;
 };
 
-const wrapUv = (cmd) => (cmd[0] === "uv" ? cmd : ["uv", "run", ...cmd]);
+
 
 const detectPythonCommand = (root = ROOT) => {
   const env = {};
@@ -247,8 +243,8 @@ const pickFreePort = (start, attempts = 200) =>
  *  - Others  : PORT env var is already set; nothing extra needed
  */
 const applyPort = (name, commands, env) => {
-  if (!env.PORT) return commands;
-  const port = env.PORT;
+  const port = env.PORT || String(defaultPorts[name] || "");
+  if (!port) return commands;
 
   if (name === "Django") {
     return commands.map((cmd) =>
@@ -286,7 +282,7 @@ const applyPort = (name, commands, env) => {
 
 const installDeps = (name, pyMode) => {
   logStep("Installing dependencies");
-  if (["Next.js", "Vite", "Nuxt", "SvelteKit", "Remix", "Expo", "Node"].includes(name) && fs.existsSync(path.join(ROOT, "package.json"))) {
+  if (["Next.js", "Vite", "Nuxt", "SvelteKit", "Remix", "Expo", "Node", "Node (server+client)"].includes(name) && fs.existsSync(path.join(ROOT, "package.json"))) {
     const pm = detectPkgManager();
     const installCmd =
       pm === "yarn"
@@ -425,7 +421,10 @@ const listSessions = () => {
     .split(/\r?\n/)
     .filter(Boolean)
     .filter((s) => s.startsWith("dev-"));
-  if (!lines.length) return;
+  if (!lines.length) {
+    logWarn("No active dev sessions.");
+    return;
+  }
 
   const parsed = lines.map((line) => {
     const [name, created, root, sessionPath, port] = line.split("\t");
@@ -490,6 +489,7 @@ const defaultPorts = {
   Remix: 3000,
   Expo: 3000,
   Node: 3000,
+  "Node (server+client)": 3000,
   Vite: 5173,
   SvelteKit: 5173,
   Django: 8000,
@@ -646,7 +646,12 @@ Behavior:
       process.exit(1);
     }
     logStep("Launching in tmux");
-    runWithTmux(adjustedCommands, env);
+    // Only pass overridden env vars to tmux (it inherits the rest from parent)
+    const tmuxEnv = {};
+    for (const [k, v] of Object.entries(env)) {
+      if (process.env[k] !== v) tmuxEnv[k] = v;
+    }
+    runWithTmux(adjustedCommands, tmuxEnv);
     return;
   }
 
