@@ -7,12 +7,13 @@ One command to detect your stack, install deps, pick a free port, and start the 
 npm install -g .
 
 # run in any project root
-dev             # auto-detect + run (foreground, sequential)
-dev --print     # show what would run (no execution)
-dev --tmux      # launch inside a tmux session
-dev sessions    # list tmux sessions started by dev
-dev kill NAME   # kill a specific dev tmux session
-dev help        # usage
+dev                 # auto-detect + run (foreground, sequential)
+dev --print         # show what would run (no execution)
+dev --port 4000     # use a specific port
+dev --tmux          # launch inside a tmux session
+dev sessions        # list tmux sessions started by dev
+dev kill NAME       # kill a specific dev tmux session
+dev help            # usage
 ```
 Ensure your npm global bin directory is on `PATH` (`npm bin -g`).
 
@@ -34,9 +35,12 @@ Ensure your npm global bin directory is on `PATH` (`npm bin -g`).
 | Command | Behavior |
 |---|---|
 | `dev` | Runs the first detected command in the foreground (default) |
+| `dev --port 4000` | Forces port 4000; skips free-port scan |
 | `dev --tmux` | Launches inside a new tmux session; splits panes for multi-command stacks |
 | `dev sessions` | Lists all `dev-...` tmux sessions with paths, timestamps, and URLs |
 | `dev kill <name>` | Kills a specific tmux session |
+
+**Port priority:** `--port` flag > `PORT` env var > framework default (3000 / 8000 / 8080).
 
 > **Multi-command stacks** (e.g. `dev:server` + `dev:client`): default mode runs only the first command. Use `--tmux` to run all commands in split panes.
 

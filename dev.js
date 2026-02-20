@@ -485,6 +485,7 @@ typeset -A opt_args
 _arguments -C \\
     '--print[Show detected commands and port only]' \\
     '--tmux[Launch inside tmux session]' \\
+    '--port[Specify port number]:port number:' \\
     '1: :->cmds' \\
     '*:: :->args'
 
@@ -528,18 +529,23 @@ esac`);
 dev - project auto launcher
 
 Usage:
-  dev               # detect + install deps + run (sequential, foreground)
-  dev --print       # show detected commands/PORT only
-  dev --tmux        # launch inside a tmux session
-  dev sessions      # list tmux sessions started by dev
-  dev kill <name>   # kill a specific dev tmux session
-  dev completion    # generate zsh completion script
-  dev help          # usage
+  dev                    # detect + install deps + run (sequential, foreground)
+  dev --print            # show detected commands/PORT only
+  dev --port <number>    # use a specific port
+  dev --tmux             # launch inside a tmux session
+  dev sessions           # list tmux sessions started by dev
+  dev kill <name>        # kill a specific dev tmux session
+  dev completion         # generate zsh completion script
+  dev help               # usage
+
+Port priority:
+  --port flag > PORT env var > framework default
 
 Behavior:
   - Detects stack (Node/Python/Go/Java) and picks commands.
   - Installs deps (pnpm/yarn/bun/npm, uv sync, go mod download).
   - Chooses a free port near the default; falls back to OS-assigned.
+  - --port skips the free-port scan and uses the given port directly.
   - Runs the first command sequentially by default (foreground).
   - Use --tmux to launch inside tmux (multiple commands run in split panes).
   - Python: prefers .venv/bin/python; else uv run; if neither, exits.
@@ -549,6 +555,13 @@ Behavior:
 
   const printOnly = args.includes("--print");
   const useTmux = args.includes("--tmux");
+  const portFlagIdx = args.indexOf("--port");
+  const portFlag = portFlagIdx !== -1 ? args[portFlagIdx + 1] : null;
+  if (portFlag !== null && (isNaN(portFlag) || !portFlag)) {
+    logFail("--port requires a valid port number (e.g. dev --port 4000)");
+    process.exit(1);
+  }
+
   const { name, commands, env: extraEnv, pyMode: detectedPyMode } = detect();
   if (!commands.length) {
     logFail("No framework detected. Please add a rule.");
@@ -564,7 +577,10 @@ Behavior:
 
   const env = { ...process.env, ...extraEnv };
 
-  if (defaultPorts[name]) {
+  if (portFlag) {
+    // --port takes highest priority; skip free-port scan
+    env.PORT = portFlag;
+  } else if (defaultPorts[name]) {
     const desired = parseInt(env.PORT || defaultPorts[name], 10);
     const free = await pickFreePort(desired);
     if (free === null) logWarn(`Could not find a free port near ${desired}. Continuing without PORT override.`);
