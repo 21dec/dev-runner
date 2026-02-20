@@ -7,13 +7,14 @@ One command to detect your stack, install deps, pick a free port, and start the 
 npm install -g .
 
 # run in any project root
-dev                 # auto-detect + run (foreground, sequential)
-dev --print         # show what would run (no execution)
-dev --port 4000     # use a specific port
-dev --tmux          # launch inside a tmux session
-dev sessions        # list tmux sessions started by dev
-dev kill NAME       # kill a specific dev tmux session
-dev help            # usage
+dev                              # auto-detect + run (foreground, sequential)
+dev --print                      # show what would run (no execution)
+dev --port 4000                  # use a specific port
+dev --env VITE_API_PORT=4000     # pass env vars to the process
+dev --tmux                       # launch inside a tmux session
+dev sessions                     # list tmux sessions started by dev
+dev kill NAME                    # kill a specific dev tmux session
+dev help                         # usage
 ```
 Ensure your npm global bin directory is on `PATH` (`npm bin -g`).
 
@@ -27,7 +28,8 @@ Ensure your npm global bin directory is on `PATH` (`npm bin -g`).
   - **Java**: Gradle `bootRun`, Maven `spring-boot:run`.
 - **Package manager**: chooses pnpm > yarn > bun > npm based on lockfiles; defaults to npm when only `package.json` is present.
 - **Installs deps** (best effort): `pnpm|yarn|bun|npm install`, `uv sync`, `go mod download`.
-- **Port handling**: starts from a sensible default (3000 for Node, 8000 for Django/FastAPI/Flask, 8080 for Go/Java), scans for a free port, falls back to an OS-assigned port; prints the final `PORT`.
+- **Port handling**: starts from a sensible default (3000 for Node, 5173 for Vite/SvelteKit, 8000 for Django/FastAPI/Flask, 8080 for Go/Java), scans for a free port, falls back to an OS-assigned port; prints the final `PORT`. Vite and SvelteKit receive `--port` as a CLI argument (they don't read `PORT` env var).
+- **Environment variables**: pass arbitrary env vars with `--env KEY=VALUE` (repeatable). Useful for Vite's `VITE_*` vars.
 - **Output**: colorized step banners (Detection → Installing deps → Launching).
 
 ## Launch modes
@@ -36,11 +38,26 @@ Ensure your npm global bin directory is on `PATH` (`npm bin -g`).
 |---|---|
 | `dev` | Runs the first detected command in the foreground (default) |
 | `dev --port 4000` | Forces port 4000; skips free-port scan |
+| `dev --env KEY=VALUE` | Sets env var for the process (repeatable) |
 | `dev --tmux` | Launches inside a new tmux session; splits panes for multi-command stacks |
 | `dev sessions` | Lists all `dev-...` tmux sessions with paths, timestamps, and URLs |
 | `dev kill <name>` | Kills a specific tmux session |
 
-**Port priority:** `--port` flag > `PORT` env var > framework default (3000 / 8000 / 8080).
+**Port priority:** `--port` flag > `PORT` env var > framework default (3000 / 5173 / 8000 / 8080).
+
+### Environment variables
+
+Use `--env` to pass environment variables to the dev process. This is especially useful for **Vite** apps that read `import.meta.env.VITE_*`:
+
+```bash
+# Single env var
+dev --env VITE_API_PORT=4000
+
+# Multiple env vars + custom port
+dev --port 5188 --env VITE_API_PORT=4000 --env VITE_API_HOST=localhost
+```
+
+`--env` overrides take the highest priority — they win over both `process.env` and framework-detected env vars.
 
 > **Multi-command stacks** (e.g. `dev:server` + `dev:client`): default mode runs only the first command. Use `--tmux` to run all commands in split panes.
 
