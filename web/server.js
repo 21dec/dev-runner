@@ -325,14 +325,14 @@ app.post("/api/detect", (req, res) => {
             "SvelteKit": { type: "Web", icon: "globe" },
             "Remix": { type: "Web", icon: "globe" },
             "Expo": { type: "Web", icon: "globe" },
-            "Node": { type: "Api", icon: "code" },
-            "Node (server+client)": { type: "Api", icon: "code" },
-            "Django": { type: "Api", icon: "code" },
-            "FastAPI": { type: "Api", icon: "zap" },
-            "Flask": { type: "Api", icon: "code" },
-            "Go": { type: "Api", icon: "code" },
-            "Gradle": { type: "Api", icon: "server" },
-            "Maven": { type: "Api", icon: "server" },
+            "Node": { type: "API", icon: "code" },
+            "Node (server+client)": { type: "API", icon: "code" },
+            "Django": { type: "API", icon: "code" },
+            "FastAPI": { type: "API", icon: "zap" },
+            "Flask": { type: "API", icon: "code" },
+            "Go": { type: "API", icon: "code" },
+            "Gradle": { type: "API", icon: "server" },
+            "Maven": { type: "API", icon: "server" },
         };
         const meta = typeMap[framework] || { type: "Service", icon: "box" };
 

@@ -3,7 +3,7 @@
     {
       "id": "mlw6qvme6c4x",
       "name": "quick-capture/server",
-      "type": "Api",
+      "type": "API",
       "icon": "code",
       "command": "npm run dev",
       "cwd": "/Users/kakao/aiprojects/quick-capture/server",
