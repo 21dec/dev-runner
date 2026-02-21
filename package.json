@@ -1,18 +1,28 @@
 {
   "name": "dev-runner",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Auto-detect project launcher with dep install and port handling",
+  "main": "main.js",
   "bin": {
     "dev": "./dev.js"
   },
   "scripts": {
-    "build": "chmod +x dev.js"
+    "build": "chmod +x dev.js",
+    "start": "electron .",
+    "dev:web": "node web/server.js"
   },
   "files": [
     "dev.js",
-    "install_dev_runner.sh",
+    "main.js",
+    "web/",
     "README.md"
   ],
+  "dependencies": {
+    "express": "^4.21.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
+  },
   "license": "MIT",
   "private": true
 }

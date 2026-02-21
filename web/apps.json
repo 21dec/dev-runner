@@ -1,0 +1,35 @@
+{
+  "apps": [
+    {
+      "id": "mlw6qvme6c4x",
+      "name": "quick-capture/server",
+      "type": "Api",
+      "icon": "server",
+      "command": "npm run dev",
+      "cwd": "/Users/kakao/aiprojects/quick-capture/server"
+    },
+    {
+      "id": "mlw73gce4g20",
+      "name": "quick-capture/web",
+      "type": "Web",
+      "icon": "globe",
+      "command": "npm run dev",
+      "cwd": "/Users/kakao/aiprojects/quick-capture/web",
+      "env": {
+        "VITE_API_PORT": "3030"
+      }
+    }
+  ],
+  "ports": {
+    "frontend": [
+      5188,
+      8000
+    ],
+    "backend": [
+      3030
+    ]
+  },
+  "assignments": {
+    "5188": "mlw73gce4g20"
+  }
+}

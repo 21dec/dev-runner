@@ -520,6 +520,18 @@ const main = async () => {
     }
     return killSession(target);
   }
+  if (args[0] === "ui") {
+    try {
+      const electron = require("electron");
+      const cp = require("child_process");
+      const mainPath = path.join(__dirname, "main.js");
+      cp.spawn(electron, [mainPath], { stdio: "inherit", detached: true }).unref();
+    } catch {
+      // Fallback: run web server directly
+      require("./web/server.js");
+    }
+    return;
+  }
   if (args[0] === "completion") {
     console.log(`#compdef dev
 
