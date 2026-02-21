@@ -83,9 +83,9 @@ app.get("/api/apps", (_req, res) => {
 });
 
 app.post("/api/apps", (req, res) => {
-    const { name, type, icon, command, cwd, env } = req.body;
+    const { name, type, icon, command, cwd, env, framework } = req.body;
     if (!name || !command) return res.status(400).json({ error: "name and command are required" });
-    const newApp = { id: generateId(), name, type: type || "Service", icon: icon || "box", command, cwd: cwd || "", env: env || {} };
+    const newApp = { id: generateId(), name, type: type || "Service", icon: icon || "box", command, cwd: cwd || "", env: env || {}, framework: framework || "" };
     config.apps.push(newApp);
     saveConfig();
     broadcastSSE("state", getState());
@@ -96,7 +96,7 @@ app.put("/api/apps/:id", (req, res) => {
     const { id } = req.params;
     const idx = config.apps.findIndex((a) => a.id === id);
     if (idx === -1) return res.status(404).json({ error: "app not found" });
-    const { name, type, icon, command, cwd, env } = req.body;
+    const { name, type, icon, command, cwd, env, framework } = req.body;
     config.apps[idx] = {
         ...config.apps[idx],
         ...(name !== undefined && { name }),
@@ -105,6 +105,7 @@ app.put("/api/apps/:id", (req, res) => {
         ...(command !== undefined && { command }),
         ...(cwd !== undefined && { cwd }),
         ...(env !== undefined && { env }),
+        ...(framework !== undefined && { framework }),
     };
     saveConfig();
     broadcastSSE("state", getState());
