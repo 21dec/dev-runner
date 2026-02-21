@@ -1,0 +1,18 @@
+/* Global reset & base styles */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+}
+
+/* Drag cursor override */
+[draggable="true"]:active {
+    cursor: grabbing !important;
+}
