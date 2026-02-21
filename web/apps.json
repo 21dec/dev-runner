@@ -9,7 +9,7 @@
       "cwd": "/Users/kakao/aiprojects/quick-capture/server"
     },
     {
-      "id": "mlw73gce4g20",
+      "id": "mlwc6xjn6pyh",
       "name": "quick-capture/web",
       "type": "Web",
       "icon": "globe",
@@ -26,10 +26,9 @@
       8000
     ],
     "backend": [
+      3000,
       3030
     ]
   },
-  "assignments": {
-    "5188": "mlw73gce4g20"
-  }
+  "assignments": {}
 }
