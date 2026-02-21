@@ -6,6 +6,7 @@ export interface AppDef {
     command: string;
     cwd: string;
     env?: Record<string, string>;
+    framework?: string;
 }
 
 export interface Assignment {
