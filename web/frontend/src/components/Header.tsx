@@ -44,12 +44,18 @@ export function Header({ connected }: HeaderProps) {
             </Space>
             <Space
                 size={8}
-                style={{ WebkitAppRegion: "no-drag" as unknown as string }}
+                style={{ WebkitAppRegion: "no-drag" as unknown as string, height: 22, alignItems: "center", display: "flex" }}
             >
-                <Badge status={connected ? "success" : "error"} />
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                    {connected ? "연결됨" : "연결 끊김"}
-                </Text>
+                {connected ? (
+                    <div className="status-dot-blinking" title="연결됨" />
+                ) : (
+                    <>
+                        <Badge status="error" />
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                            연결 끊김
+                        </Text>
+                    </>
+                )}
             </Space>
         </div>
     );
