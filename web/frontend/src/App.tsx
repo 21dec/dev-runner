@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ConfigProvider, App as AntApp, Layout, theme } from "antd";
-import { connectSSE } from "./api";
+import { DndContext, DragOverlay, DragStartEvent, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { connectSSE, api } from "./api";
 import type { AppState } from "./types";
 import { Header } from "./components/Header";
 import { AppsSection } from "./components/AppsSection";
 import { PortsLayout } from "./components/PortsLayout";
 import { LogPanel } from "./components/LogPanel";
+import { AppCard } from "./components/AppCard";
 import "./index.css";
 
 const { Content } = Layout;
@@ -18,7 +20,7 @@ export default function App() {
     });
     const [connected, setConnected] = useState(false);
     const [logPort, setLogPort] = useState<string | null>(null);
-    const [draggedAppId, setDraggedAppId] = useState<string | null>(null);
+    const [activeId, setActiveId] = useState<string | null>(null);
     const logsRef = useRef<Record<string, string[]>>({});
 
     const handleLog = useCallback((data: { port: string; line: string }) => {
@@ -52,6 +54,28 @@ export default function App() {
         return ids;
     }, [state.assignments]);
 
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 5, // Require 5px movement before drag starts to prevent clicking issues
+            },
+        })
+    );
+
+    const handleDragStart = useCallback((event: DragStartEvent) => {
+        setActiveId(event.active.id as string);
+    }, []);
+
+    const handleDragEnd = useCallback((event: DragEndEvent) => {
+        setActiveId(null);
+        const { active, over } = event;
+        if (active && over && over.id) {
+            api("POST", "/assign", { appId: active.id as string, port: Number(over.id) });
+        }
+    }, []);
+
+    const activeApp = activeId ? state.apps.find((a) => a.id === activeId) : null;
+
     return (
         <ConfigProvider
             theme={{
@@ -69,28 +93,36 @@ export default function App() {
             }}
         >
             <AntApp>
-                <Layout style={{ minHeight: "100vh", background: "#f2f2f7" }}>
-                    <Content style={{ maxWidth: "55%", minWidth: 700, margin: "0 auto", padding: "16px 24px 80px", width: "100%" }}>
-                        <Header connected={connected} />
-                        <AppsSection
-                            apps={state.apps}
-                            assignedIds={getAssignedAppIds()}
-                            draggedAppId={draggedAppId}
-                            setDraggedAppId={setDraggedAppId}
+                <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+                    <Layout style={{ minHeight: "100vh", background: "#f2f2f7" }}>
+                        <Content style={{ maxWidth: "55%", minWidth: 700, margin: "0 auto", padding: "16px 24px 80px", width: "100%" }}>
+                            <Header connected={connected} />
+                            <AppsSection
+                                apps={state.apps}
+                                assignedIds={getAssignedAppIds()}
+                            />
+                            <PortsLayout
+                                state={state}
+                                onOpenLogs={setLogPort}
+                            />
+                        </Content>
+                        <LogPanel
+                            port={logPort}
+                            logs={logPort ? logsRef.current[logPort] || [] : []}
+                            onClose={() => setLogPort(null)}
                         />
-                        <PortsLayout
-                            state={state}
-                            draggedAppId={draggedAppId}
-                            setDraggedAppId={setDraggedAppId}
-                            onOpenLogs={setLogPort}
-                        />
-                    </Content>
-                    <LogPanel
-                        port={logPort}
-                        logs={logPort ? logsRef.current[logPort] || [] : []}
-                        onClose={() => setLogPort(null)}
-                    />
-                </Layout>
+                    </Layout>
+                    <DragOverlay dropAnimation={null}>
+                        {activeApp ? (
+                            <AppCard
+                                app={activeApp}
+                                isAssigned={false}
+                                onEdit={() => { }}
+                                isOverlay
+                            />
+                        ) : null}
+                    </DragOverlay>
+                </DndContext>
             </AntApp>
         </ConfigProvider>
     );

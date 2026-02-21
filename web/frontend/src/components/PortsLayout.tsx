@@ -9,15 +9,12 @@ const { Text } = Typography;
 
 interface PortsLayoutProps {
     state: AppState;
-    draggedAppId: string | null;
-    setDraggedAppId: (id: string | null) => void;
     onOpenLogs: (port: string) => void;
 }
 
-export function PortsLayout({ state, draggedAppId, setDraggedAppId, onOpenLogs }: PortsLayoutProps) {
+export function PortsLayout({ state, onOpenLogs }: PortsLayoutProps) {
     const [portModalOpen, setPortModalOpen] = useState(false);
     const [portModalCategory, setPortModalCategory] = useState<"frontend" | "backend">("frontend");
-    const [dragOverPort, setDragOverPort] = useState<number | null>(null);
 
     const openAddPort = (category: "frontend" | "backend") => {
         setPortModalCategory(category);
@@ -48,12 +45,7 @@ export function PortsLayout({ state, draggedAppId, setDraggedAppId, onOpenLogs }
                             key={port}
                             port={port}
                             state={state}
-                            draggedAppId={draggedAppId}
-                            setDraggedAppId={setDraggedAppId}
                             onOpenLogs={onOpenLogs}
-                            dragOver={dragOverPort === port}
-                            onDragEnter={() => setDragOverPort(port)}
-                            onDragLeave={() => setDragOverPort((prev) => (prev === port ? null : prev))}
                         />
                     ))}
                     {ports.length === 0 && (

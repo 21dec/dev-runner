@@ -1,5 +1,6 @@
 import { Card, Typography, Tag, Popconfirm, Button, Space } from "antd";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { useDraggable } from "@dnd-kit/core";
 import { api } from "../api";
 import type { AppDef } from "../types";
 import { Icon } from "../icons";
@@ -10,27 +11,34 @@ interface AppCardProps {
     app: AppDef;
     isAssigned: boolean;
     onEdit: (id: string) => void;
-    setDraggedAppId: (id: string | null) => void;
+    isOverlay?: boolean;
 }
 
-export function AppCard({ app, isAssigned, onEdit, setDraggedAppId }: AppCardProps) {
+export function AppCard({ app, isAssigned, onEdit, isOverlay = false }: AppCardProps) {
+    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+        id: app.id,
+        disabled: isAssigned || isOverlay,
+        data: { type: "AppCard", app },
+    });
+
+    const style = {
+        transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+        cursor: isAssigned ? "default" : "grab",
+        opacity: isDragging ? 0.3 : (isAssigned ? 0.45 : 1),
+        transition: isDragging ? undefined : "all 180ms ease",
+        borderRadius: 10,
+        boxShadow: isOverlay ? "0 10px 30px rgba(0,0,0,0.15)" : undefined,
+        zIndex: isOverlay ? 999 : undefined,
+    };
+
     return (
         <Card
+            ref={isOverlay ? undefined : setNodeRef}
+            {...(isOverlay ? {} : listeners)}
+            {...(isOverlay ? {} : attributes)}
             size="small"
             id={`app-${app.id}`}
-            draggable={!isAssigned}
-            onDragStart={(e) => {
-                setDraggedAppId(app.id);
-                e.dataTransfer.effectAllowed = "move";
-                e.dataTransfer.setData("text/plain", app.id);
-            }}
-            onDragEnd={() => setDraggedAppId(null)}
-            style={{
-                cursor: isAssigned ? "default" : "grab",
-                opacity: isAssigned ? 0.45 : 1,
-                transition: "all 180ms ease",
-                borderRadius: 10,
-            }}
+            style={style}
             hoverable={!isAssigned}
             styles={{ body: { padding: "8px 12px" } }}
         >

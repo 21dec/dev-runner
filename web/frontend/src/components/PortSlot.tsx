@@ -6,6 +6,7 @@ import {
     LinkOutlined,
     DeleteOutlined,
 } from "@ant-design/icons";
+import { useDroppable } from "@dnd-kit/core";
 import { api } from "../api";
 import type { AppState } from "../types";
 import { Icon } from "../icons";
@@ -15,61 +16,39 @@ const { Text } = Typography;
 interface PortSlotProps {
     port: number;
     state: AppState;
-    draggedAppId: string | null;
-    setDraggedAppId: (id: string | null) => void;
     onOpenLogs: (port: string) => void;
-    dragOver: boolean;
-    onDragEnter: () => void;
-    onDragLeave: () => void;
 }
 
 export function PortSlot({
     port,
     state,
-    draggedAppId,
-    setDraggedAppId,
     onOpenLogs,
-    dragOver,
-    onDragEnter,
-    onDragLeave,
 }: PortSlotProps) {
     const portStr = String(port);
     const assignment = state.assignments[portStr];
     const isRunning = assignment && assignment.status === "running";
     const app = assignment?.app;
 
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        onDragLeave();
-        const appId = e.dataTransfer.getData("text/plain") || draggedAppId;
-        if (appId && port) {
-            api("POST", "/assign", { appId, port });
-        }
-        setDraggedAppId(null);
-    };
+    const { setNodeRef, isOver } = useDroppable({
+        id: portStr,
+        data: { type: "PortSlot", port },
+    });
 
     return (
         <Card
+            ref={setNodeRef}
             size="small"
-            onDragOver={(e) => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = "move";
-            }}
-            onDragEnter={(e) => {
-                e.preventDefault();
-                onDragEnter();
-            }}
-            onDragLeave={onDragLeave}
-            onDrop={handleDrop}
             style={{
                 borderRadius: 10,
-                borderColor: isRunning ? "#34c759" : dragOver ? "#007aff" : undefined,
+                borderColor: isRunning ? "#34c759" : isOver ? "#007aff" : undefined,
                 background: isRunning
                     ? "#f0fdf4"
-                    : dragOver
+                    : isOver
                         ? "#e8f0fe"
                         : undefined,
                 transition: "all 180ms ease",
+                transform: isOver ? "scale(1.02) translateY(-2px)" : "scale(1)",
+                boxShadow: isOver ? "0 8px 20px rgba(0, 122, 255, 0.15)" : undefined,
             }}
             styles={{ body: { padding: "8px 12px" } }}
         >

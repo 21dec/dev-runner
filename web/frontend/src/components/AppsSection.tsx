@@ -10,11 +10,9 @@ const { Text } = Typography;
 interface AppsSectionProps {
     apps: AppDef[];
     assignedIds: Set<string>;
-    draggedAppId: string | null;
-    setDraggedAppId: (id: string | null) => void;
 }
 
-export function AppsSection({ apps, assignedIds, draggedAppId, setDraggedAppId }: AppsSectionProps) {
+export function AppsSection({ apps, assignedIds }: AppsSectionProps) {
     const [modalOpen, setModalOpen] = useState(false);
     const [editingApp, setEditingApp] = useState<AppDef | null>(null);
 
@@ -48,7 +46,6 @@ export function AppsSection({ apps, assignedIds, draggedAppId, setDraggedAppId }
                             app={app}
                             isAssigned={assignedIds.has(app.id)}
                             onEdit={handleEdit}
-                            setDraggedAppId={setDraggedAppId}
                         />
                     </Col>
                 ))}
