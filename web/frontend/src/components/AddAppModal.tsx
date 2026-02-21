@@ -34,6 +34,7 @@ export function AddAppModal({ open, editingApp, onClose }: AddAppModalProps) {
                     icon: editingApp.icon,
                     command: editingApp.command,
                     env: envStr,
+                    framework: editingApp.framework,
                 });
             } else {
                 form.resetFields();
@@ -50,11 +51,13 @@ export function AddAppModal({ open, editingApp, onClose }: AddAppModalProps) {
             const result = await detectFramework(cwd);
             setDetectResult(result);
             if (result.detected) {
+                const currentName = form.getFieldValue("name");
                 form.setFieldsValue({
-                    name: result.name || result.framework,
+                    name: currentName || result.name || result.framework,
                     command: result.command,
                     type: result.type || "Service",
                     icon: result.icon || "box",
+                    framework: result.framework,
                 });
             }
         } catch {
@@ -81,6 +84,7 @@ export function AddAppModal({ open, editingApp, onClose }: AddAppModalProps) {
             command: values.command,
             cwd: values.cwd || "",
             env: Object.keys(env).length > 0 ? env : {},
+            framework: values.framework,
         };
 
         if (editingApp) {
@@ -143,9 +147,19 @@ export function AddAppModal({ open, editingApp, onClose }: AddAppModalProps) {
                     </div>
                 )}
 
-                <Form.Item label="이름" name="name" rules={[{ required: true, message: "이름을 입력하세요" }]}>
-                    <Input placeholder="My App" />
-                </Form.Item>
+                <Row gutter={10}>
+                    <Col span={12}>
+                        <Form.Item label="이름" name="name" rules={[{ required: true, message: "이름을 입력하세요" }]} style={{ margin: 0 }}>
+                            <Input placeholder="My App" />
+                        </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                        <Form.Item label="프레임워크" name="framework" style={{ margin: 0 }}>
+                            <Input placeholder="예: Next.js, FastAPI" />
+                        </Form.Item>
+                    </Col>
+                </Row>
+                <div style={{ height: 16 }} />
 
                 <Form.Item label="실행 명령어" name="command" rules={[{ required: true, message: "명령어를 입력하세요" }]}>
                     <Input placeholder="npm run dev" />
