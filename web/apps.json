@@ -4,9 +4,10 @@
       "id": "mlw6qvme6c4x",
       "name": "quick-capture/server",
       "type": "Api",
-      "icon": "server",
+      "icon": "code",
       "command": "npm run dev",
-      "cwd": "/Users/kakao/aiprojects/quick-capture/server"
+      "cwd": "/Users/kakao/aiprojects/quick-capture/server",
+      "env": {}
     },
     {
       "id": "mlwc6xjn6pyh",
@@ -22,8 +23,8 @@
   ],
   "ports": {
     "frontend": [
-      5188,
-      8000
+      3001,
+      5188
     ],
     "backend": [
       3000,
