@@ -9,7 +9,10 @@
   "scripts": {
     "build": "chmod +x dev.js",
     "start": "electron .",
-    "dev:web": "node web/server.js"
+    "dev:web": "node web/server.js",
+    "dist": "npm run build:frontend && electron-builder",
+    "build:frontend": "cd web/frontend && npm run build",
+    "postinstall": "electron-builder install-app-deps"
   },
   "files": [
     "dev.js",
@@ -21,7 +24,35 @@
     "express": "^4.21.0"
   },
   "devDependencies": {
-    "electron": "^33.0.0"
+    "electron": "^33.0.0",
+    "electron-builder": "^26.8.1"
+  },
+  "build": {
+    "appId": "com.21dec.dev-runner",
+    "productName": "dev-runner",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "dev.js",
+      "web/server.js",
+      "web/apps.json",
+      "web/frontend/dist/**/*",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "build/icon.png"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png"
+    }
   },
   "license": "MIT",
   "private": true
