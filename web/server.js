@@ -12,7 +12,7 @@ const { spawn, spawnSync } = require("child_process");
 
 const app = express();
 const UI_PORT = parseInt(process.argv[2] || process.env.UI_PORT || "4444", 10);
-const CONFIG_PATH = path.join(__dirname, "apps.json");
+const CONFIG_PATH = process.env.DEV_RUNNER_CONFIG_PATH || path.join(__dirname, "apps.json");
 
 // --- State ---
 let config = loadConfig();
@@ -195,6 +195,8 @@ app.post("/api/assign", (req, res) => {
     const cmdParts = command.split(/\s+/);
 
     try {
+        broadcastSSE("log", { port: portStr, line: `\n[Starting process: ${command} in ${cwd}]\n` });
+
         const child = spawn(cmdParts[0], cmdParts.slice(1), {
             cwd,
             env,
@@ -220,6 +222,7 @@ app.post("/api/assign", (req, res) => {
         });
 
         child.on("exit", (code) => {
+            console.log(`Process on port ${portStr} exited with code ${code}`);
             delete runningProcesses[portStr];
             delete config.assignments[portStr];
             saveConfig();
@@ -228,6 +231,7 @@ app.post("/api/assign", (req, res) => {
         });
 
         child.on("error", (err) => {
+            console.error(`Error spawning process on port ${portStr}:`, err);
             delete runningProcesses[portStr];
             delete config.assignments[portStr];
             saveConfig();
