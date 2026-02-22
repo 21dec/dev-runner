@@ -61,6 +61,38 @@ dev --port 5188 --env VITE_API_PORT=4000 --env VITE_API_HOST=localhost
 
 > **Multi-command stacks** (e.g. `dev:server` + `dev:client`): default mode runs only the first command. Use `--tmux` to run all commands in split panes.
 
+## Web UI (Electron App)
+
+`dev-runner` includes a beautiful desktop interface (Electron) for managing complex multi-service architectures visually.
+
+### How to Run
+```bash
+dev ui
+# or from source
+npm start
+```
+
+### Key Features
+- **Visual Dashboard**: View all your configured applications and ports at a glance.
+- **Drag & Drop**: Assign applications to ports by dragging cards. Starting/Stopping is as simple as dropping an app on a port.
+- **Log Viewer**: Integrated terminal output for each running process.
+- **Smart Import**: Uses the same detection logic as the CLI to auto-configure new projects.
+
+### Build & Distribution
+To package the application as a standalone executable (e.g., `.dmg` or `.zip` on macOS):
+
+1. **Build the frontend** (React/Vite):
+   ```bash
+   npm run build:frontend
+   ```
+2. **Package the app**:
+   ```bash
+   npm run dist
+   ```
+The output will be generated in the `dist/` folder.
+
+---
+
 ## Requirements
 - Node.js + npm (or your package manager)
 - Optional: `tmux` (only needed for `--tmux` mode)
