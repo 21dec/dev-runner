@@ -15,13 +15,13 @@ export function Header({ connected }: HeaderProps) {
                 alignItems: "center",
                 justifyContent: "space-between",
                 padding: "8px 0 20px",
-                WebkitAppRegion: "drag" as unknown as string,
+                ["WebkitAppRegion" as any]: "drag",
             }}
         >
             <Space
                 size={8}
                 align="center"
-                style={{ WebkitAppRegion: "no-drag" as unknown as string }}
+                style={{ ["WebkitAppRegion" as any]: "no-drag" }}
             >
                 <div
                     style={{
@@ -44,7 +44,7 @@ export function Header({ connected }: HeaderProps) {
             </Space>
             <Space
                 size={8}
-                style={{ WebkitAppRegion: "no-drag" as unknown as string, height: 22, alignItems: "center", display: "flex" }}
+                style={{ ["WebkitAppRegion" as any]: "no-drag", height: 22, alignItems: "center", display: "flex" }}
             >
                 {connected ? (
                     <div className="status-dot-blinking" title="연결됨" />
