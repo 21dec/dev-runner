@@ -10,6 +10,9 @@ const path = require("path");
 const fs = require("fs");
 const { spawn, spawnSync } = require("child_process");
 
+// Import detection logic from dev.js
+const devLogic = require("../dev.js");
+
 const app = express();
 const UI_PORT = parseInt(process.argv[2] || process.env.UI_PORT || "4444", 10);
 const CONFIG_PATH = process.env.DEV_RUNNER_CONFIG_PATH || path.join(__dirname, "apps.json");
@@ -293,33 +296,28 @@ app.post("/api/detect", (req, res) => {
     }
 
     try {
-        const devJs = path.join(__dirname, "..", "dev.js");
-        const result = spawnSync("node", [devJs, "--print"], {
-            cwd,
-            encoding: "utf8",
-            timeout: 10000,
-            env: { ...process.env },
-        });
+        const detection = devLogic.detect(cwd);
+        const { name: framework, commands, env: detectedEnv } = detection;
 
-        const output = (result.stdout || "") + (result.stderr || "");
-
-        // Parse output:  "  Framework : Next.js"  "  Command   : pnpm run dev"  "  PORT      : 3000"
-        const frameworkMatch = output.match(/Framework\s*:\s*(.+)/);
-        const commandMatch = output.match(/Command\s*:\s*(.+)/);
-        const portMatch = output.match(/PORT\s*:\s*(\d+)/);
-
-        if (!frameworkMatch || !commandMatch) {
+        if (!framework || framework === "Unknown" || !commands.length) {
             return res.json({ detected: false, error: "프레임워크를 감지할 수 없습니다" });
         }
 
-        const framework = frameworkMatch[1].trim();
-        // Strip port-related args from command since UI assigns ports via drag & drop
-        let command = commandMatch[1].trim()
-            .replace(/\s+--\s+--port\s+\d+$/, "")   // Vite/SvelteKit: "npm run dev -- --port 5173"
-            .replace(/\s+--port\s+\d+$/, "")          // Flask/FastAPI: "--port 8000"
-            .replace(/\s+0\.0\.0\.0:\d+$/, "")        // Django: "0.0.0.0:8000"
-            .replace(/\s+\d{4,5}$/, "");               // Django: trailing port number
-        const port = portMatch ? parseInt(portMatch[1]) : null;
+        // Use the first command as the base
+        let cmdParts = commands[0];
+
+        // If it's a port-aware command like Django/FastAPI, apply a dummy port just to get the string
+        // but we'll strip it to let UI handle assignments
+        const tempEnv = { ...process.env, PORT: "PORT_VAR" };
+        const adjustedCommands = devLogic.applyPort(framework, commands, tempEnv);
+        let command = adjustedCommands[0].join(" ");
+
+        // Strip port-related markers since UI assigns ports via drag & drop
+        command = command
+            .replace(/\s+--\s+--port\s+PORT_VAR$/, "")
+            .replace(/\s+--port\s+PORT_VAR$/, "")
+            .replace(/\s+PORT_VAR$/, "")
+            .replace(/\s+0\.0\.0\.0:PORT_VAR$/, "");
 
         // Infer type and icon from framework
         const typeMap = {
@@ -344,7 +342,7 @@ app.post("/api/detect", (req, res) => {
             detected: true,
             framework,
             command,
-            port,
+            port: devLogic.defaultPorts[framework] || null,
             type: meta.type,
             icon: meta.icon,
             name: framework,
