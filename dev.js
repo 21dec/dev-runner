@@ -696,7 +696,17 @@ Behavior:
   runSequential(adjustedCommands, env);
 };
 
-main().catch((err) => {
-  logFail(err.message);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err) => {
+    logFail(err.message);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  detect,
+  applyPort,
+  pythonMode,
+  defaultPorts,
+  detectPkgManager,
+};
