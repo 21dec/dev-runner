@@ -65,6 +65,8 @@ dev --port 5188 --env VITE_API_PORT=4000 --env VITE_API_HOST=localhost
 
 `dev-runner` includes a beautiful desktop interface (Electron) for managing complex multi-service architectures visually.
 
+<video src="app-usage.mov" controls width="100%"></video>
+
 ### How to Run
 ```bash
 dev ui
